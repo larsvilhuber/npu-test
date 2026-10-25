@@ -14,7 +14,7 @@ t0=$(date +%s.%N)
 read -r pb pt < <(cpu_times)
 while sleep 1; do
   read -r b t < <(cpu_times)
-  cpu=$(awk -v b="$b" -v pb="$pb" -v t="$t" -v pt="$pt" 'BEGIN{d=t-pt; printf "%.1f", d>0 ? 100*(b-pb)/d : 0}')
+  cpu=$(awk -v b="$b" -v pb="$pb" -v t="$t" -v pt="$pt" 'BEGIN{d=t-pt; printf "%.1f", (d>0) ? 100*(b-pb)/d : 0}')
   pb=$b; pt=$t
   mhz=$($CAT /sys/devices/system/cpu/cpu*/cpufreq/scaling_cur_freq 2>/dev/null | awk '{s+=$1;n++} END{if(n) printf "%.0f", s/n/1000}')
   temp=$($CAT /sys/class/thermal/thermal_zone*/temp 2>/dev/null | sort -n | tail -1 | awk '{printf "%.1f", $1/1000}')
