@@ -36,13 +36,8 @@ sudo chmod 0440 /etc/sudoers.d/npu
 sudo visudo -cf /etc/sudoers.d/npu
 ```
 
-## BirdNET model (for the audio benchmark)
-
-Download the BirdNET V2.4 FP32 TFLite model (the one BirdNET-Go bundles) from
-the [BirdNET-Analyzer](https://github.com/kahst/BirdNET-Analyzer) repository
-and place it at `models/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite` on each host.
-
-Python packages are installed into the venvs by `setup-*.sh` (no root).
+Python packages, the ResNet-18 assets and the BirdNET model (from the BirdNET-Go
+repository) are installed by `setup-*.sh` (no root).
 
 ## Offline analysis (any machine)
 

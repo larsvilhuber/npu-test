@@ -19,3 +19,8 @@ REPO=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "$REPO/assets"
 cp "$HOME"/rknn-toolkit2/rknn-toolkit-lite2/examples/resnet18/resnet18_for_rk3588.rknn "$REPO/assets/"
 cp "$HOME"/rknn-toolkit2/rknn-toolkit-lite2/examples/resnet18/space_shuttle_224.jpg "$REPO/assets/"
+
+# BirdNET V2.4 FP32 TFLite, the model BirdNET-Go bundles
+mkdir -p "$REPO/models"
+curl -L -o "$REPO/models/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite" \
+  https://github.com/tphakala/birdnet-go/raw/main/internal/classifier/data/BirdNET_GLOBAL_6K_V2.4_Model_FP32.tflite
