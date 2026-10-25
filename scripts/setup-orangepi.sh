@@ -2,6 +2,8 @@
 # Non-root setup for the Orange Pi 5 (RK3588). Root steps: docs/PREREQUISITES.md
 set -euo pipefail
 
+REPO=$(cd "$(dirname "$0")/.." && pwd)
+
 cd "$HOME"
 if [ -d rknn-toolkit2 ]; then
   git -C rknn-toolkit2 pull --ff-only
@@ -19,7 +21,6 @@ PY_VER=$(python3 -c 'import sys; print(f"{sys.version_info.major}{sys.version_in
 pip install "$HOME"/rknn-toolkit2/rknn-toolkit-lite2/packages/rknn_toolkit_lite2-*-cp"${PY_VER}"-*.whl
 
 # Pre-compiled model and test image, into the repo's assets directory
-REPO=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "$REPO/assets"
 cp "$HOME"/rknn-toolkit2/rknn-toolkit-lite2/examples/resnet18/resnet18_for_rk3588.rknn "$REPO/assets/"
 cp "$HOME"/rknn-toolkit2/rknn-toolkit-lite2/examples/resnet18/space_shuttle_224.jpg "$REPO/assets/"
