@@ -1,0 +1,13 @@
+key,value
+hostname,oiseau
+cpu_model,"Intel(R) N150"
+cores,4
+ram_gib,14.9
+kernel,Linux 7.0.0-38-generic
+os,"Ubuntu 26.04.1 LTS"
+python,3.14.4
+torch,2.14.1+cu130
+openvino,2026.4.1-22982-e213a147257-releases/2026/4
+cpu_governor,powersave
+cpu_max_mhz,3600.0000
+git_commit,f2aaf33

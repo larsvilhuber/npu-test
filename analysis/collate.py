@@ -34,11 +34,12 @@ g = bench.groupby(['host', 'test', 'engine', 'device', 'threads', 'batch'])
 summary = g.latency_ms.agg(n='count', mean='mean', median='median',
                            p95=lambda s: s.quantile(.95),
                            p99=lambda s: s.quantile(.99), std='std').reset_index()
-summary['inputs_per_s'] = 1000 * summary.batch / summary['mean']
+# median, not mean: other services on the hosts add a heavy upper tail
+summary['inputs_per_s'] = 1000 * summary.batch / summary['median']
 # BirdNET: one call = 3 s of audio
 bn = summary.engine.str.startswith('birdnet')
 summary['realtime_factor'] = None
-summary.loc[bn, 'realtime_factor'] = 3000 / summary.loc[bn, 'mean']
+summary.loc[bn, 'realtime_factor'] = 3000 / summary.loc[bn, 'median']
 
 # mean CPU% / NPU% over each test's busy period (excludes idle lead/tail)
 extra = []
@@ -79,7 +80,7 @@ def save(fig, name):
 # ---- 1. latency distribution: ResNet-18, batch 1, best config per engine --
 r18 = bench[(bench.batch == 1) & bench.engine.str.contains('rknn|torch|openvino')
             & ~bench.test.str.contains('sustained')]
-best = (r18.groupby(['host', 'test']).latency_ms.mean().reset_index()
+best = (r18.groupby(['host', 'test']).latency_ms.median().reset_index()
         .sort_values('latency_ms').groupby('host').head(3))
 sel = r18.merge(best[['host', 'test']])
 fig, ax = plt.subplots(figsize=(8, 4.5))
