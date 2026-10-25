@@ -3,7 +3,11 @@
 set -euo pipefail
 
 cd "$HOME"
-git clone https://github.com/airockchip/rknn-toolkit2.git --depth 1
+if [ -d rknn-toolkit2 ]; then
+  git -C rknn-toolkit2 pull --ff-only
+else
+  git clone https://github.com/airockchip/rknn-toolkit2.git --depth 1
+fi
 
 python3 -m venv rknn-env
 source rknn-env/bin/activate
