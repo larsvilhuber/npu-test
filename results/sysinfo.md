@@ -11,9 +11,10 @@
 | python | 3.14.4 |
 | torch | 2.14.1+cu130 |
 | openvino | 2026.4.1-22982-e213a147257-releases/2026/4 |
+| openvino_devices | CPU = Intel(R) N150; GPU = Intel(R) Graphics (iGPU) |
 | cpu_governor | powersave |
 | cpu_max_mhz | 3600.0000 |
-| git_commit | f2aaf33 |
+| git_commit | ffca3b3 |
 
 **orangepi**
 

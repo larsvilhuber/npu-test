@@ -5,13 +5,13 @@ categories: [Edge Computing, Machine Learning]
 tags: [rk3588, npu, rknn, intel-n150, pytorch, openvino, birdnet, benchmark]
 ---
 
-# Edge AI Showdown: Pi-like device with NPU vs. Intel N150 CPU: 12x faster than stock PyTorch, 7x faster than OpenVINO
+# Edge AI Showdown: Pi-like device with NPU vs. Intel N150 CPU: 3x faster than its integrated GPU, 12x faster than stock PyTorch
 
 I never know what the purpose is of **NPU** (neural-processing unit). Turns out, I have an Orange Pi 5 sitting around, which actually does have one. Compared to a small computer running a low-power Intel CPU, that NPU can accelerate certain tasks, at lower power. But note that I did not have an "AI CPU" at hand, to compare what that would look like on an Intel chip that also has an NPU.
 
 Now I need to figure out where I need this... (updating my [Birdnet Go](https://github.com/tphakala/birdnet-go) [node](https://app.birdweather.com/) on [Birdnet](https://birdnet.cornell.edu/)?)
 
-> In a head-to-head [ResNet-18](https://docs.pytorch.org/vision/main/models/generated/torchvision.models.resnet18.html) inference benchmark, the **Orange Pi 5 (RK3588 NPU)** classified an image in **4.5 ms (223 images/s)**: **12x faster** than an **Intel N150 CPU** running stock PyTorch and **7x faster** than the same CPU running Intel's OpenVINO, while using about **a quarter of one CPU core** and staying 30 °C cooler.
+> In a head-to-head [ResNet-18](https://docs.pytorch.org/vision/main/models/generated/torchvision.models.resnet18.html) inference benchmark, the **Orange Pi 5 (RK3588 NPU)** classified an image in **4.5 ms (223 images/s)**: **3x faster** than the Intel N150's integrated GPU, **7x faster** than its CPU running Intel's OpenVINO and **12x faster** than the CPU running stock PyTorch, while using about **a quarter of one CPU core** and staying 30 °C cooler than the CPU runs.
 
 This is an expanded version of my first run. The benchmark scripts are no longer pasted into the post; everything is in the [GitHub repository](https://github.com/larsvilhuber/npu-test), including the raw CSV output of every run.
 
@@ -26,8 +26,11 @@ ResNet-18, one 224x224 image per call, thousands of calls per test. I report the
 | **Orange Pi 5** | 8 CPU cores (A76+A55) | PyTorch FP32 | 112.3 | 128.4 | 8.9 | 59 |
 | **Intel N150** | 4 CPU cores | PyTorch FP32 | 53.5 | 477.6 | 18.7 | 95 |
 | **Intel N150** | 4 CPU cores | OpenVINO FP32 | 31.0 | 60.1 | 32.3 | 93 |
+| **Intel N150** | integrated GPU (Xe) | OpenVINO FP32 | 14.0 | 14.7 | 71.5 | 55 * |
 
-Note that the NPU runs the model in INT8 (the pre-compiled model from Rockchip's examples), while both CPU runs use FP32. Same network, different numeric precision; I did not check accuracy.
+\* The N150 machine runs other services that use ~27% CPU on their own (see caveats), so the GPU run's CPU figure is mostly that, plus the driver thread.
+
+Note that the NPU runs the model in INT8 (the pre-compiled model from Rockchip's examples), while all the Intel runs and the Orange Pi CPU run use FP32. Same network, different numeric precision; I did not check accuracy.
 
 ![Latency distribution](https://raw.githubusercontent.com/larsvilhuber/npu-test/main/figures/latency_distribution.png)
 
@@ -39,11 +42,11 @@ While the NPU runs inference, the Orange Pi's eight CPU cores are about 96% idle
 
 ### Five minutes of sustained load
 
-Each engine also ran continuously for 300 seconds. Nothing throttles: the NPU stays at 4.5 ms and warms from 32 to 42 °C, while the Orange Pi CPU run heats to 76 °C and the N150 to 75-79 °C, with no visible drop in clock speed or throughput. (The N150's baseline is already ~67 °C because of the other services on that machine.)
+Each engine also ran continuously for 300 seconds. Nothing throttles: the NPU stays at 4.5 ms and warms from 32 to 42 °C, the N150's iGPU holds 13.8 ms (72 img/s over 21,639 calls, with almost no spread: 95th percentile 14.5 ms), while the Orange Pi CPU run heats to 76 °C and the N150 CPU runs to 75-79 °C, with no visible drop in clock speed or throughput. (The N150's baseline is already ~67 °C because of the other services on that machine.)
 
 ![Sustained runs](https://raw.githubusercontent.com/larsvilhuber/npu-test/main/figures/sustained.png)
 
-The OpenVINO panel shows latency alternating between ~30 and ~52 ms in a regular pattern of roughly ten seconds. I did not chase this down; the likely suspect is the other workload on the machine competing for the cores.
+The OpenVINO-on-CPU panel shows latency alternating between ~30 and ~52 ms in a regular pattern of roughly ten seconds, and the GPU panel shows a milder version of the same rhythm (temperature swings with it). I did not chase this down; the likely suspects are the other workload on the machine and the chip's power limits.
 
 ### Scaling on the CPUs
 
@@ -72,11 +75,10 @@ PyTorch on the N150 scales with threads (9.3 → 13.9 → 18.7 img/s at 1, 2, 4 
 
 - **Only one NPU core is usable with this model.** My first version of this post said the NPU ran on "3 cores". It does not: with Rockchip's stock pre-compiled ResNet-18, the automatic mask (`NPU_CORE_AUTO`) and core 0 work (4.5 ms and 4.05 ms), but cores 1 and 2 and the multi-core masks (`0_1`, `0_1_2`) fail with `failed to submit` (some hang the driver until it soft-resets). Using all three cores probably requires re-exporting the model for multi-core, which needs the toolkit's x86 version.
 - **Locking the NPU clock did not help.** I had written that performance mode could reduce latency to ~1.5 ms. I tested it (devfreq governor `performance` versus the default `rknpu_ondemand`) and saw no meaningful change (4.28 vs 4.35 ms mean, 225 vs 225 img/s sustained). I did not record the NPU clock during the runs, but it reports 1 GHz, the maximum the driver offers, so presumably the default governor already reaches it under load. The earlier ~1.5 ms estimate is not reproduced.
-- **Intel iGPU:** OpenVINO only saw the CPU on the N150 (the compute runtime for the integrated GPU is not installed), so there is no iGPU number.
 
 ## Caveats
 
-- The Intel N150 box (`oiseau`) is shared: it also runs Home Assistant, UniFi and other services, which use ~27% CPU and keep it at ~67 °C before my tests start. That inflates its tail latencies (note the 95th percentile of 478 ms for four-thread PyTorch against a 53 ms median) and could hide some of its true performance; the Orange Pi was idle (load 0.1).
+- The Intel N150 box (`oiseau`) is shared: it also runs Home Assistant, UniFi and other services, which use ~27% CPU and keep it at ~67 °C before my tests start. That inflates its tail latencies (note the 95th percentile of 478 ms for four-thread PyTorch against a 53 ms median) and could hide some of its true performance; the Orange Pi was idle (load 0.1). The GPU run is the least affected by it.
 - The CPU governors differ: `performance` on the Orange Pi, `powersave` (intel_pstate, which still boosts to ~2.8 GHz under load) on the N150.
 - I did not measure power, though lower power is the usual selling point of an NPU.
 - INT8 (NPU) vs FP32 (CPU): not equal precision; accuracy not compared.
@@ -113,9 +115,10 @@ NPU load is read from `/sys/kernel/debug/rknpu/load`, and the NPU clock governor
 | python | 3.14.4 |
 | torch | 2.14.1+cu130 |
 | openvino | 2026.4.1-22982-e213a147257-releases/2026/4 |
+| openvino_devices | CPU = Intel(R) N150; GPU = Intel(R) Graphics (iGPU) |
 | cpu_governor | powersave |
 | cpu_max_mhz | 3600.0000 |
-| git_commit | f2aaf33 |
+| git_commit | ffca3b3 |
 
 **orangepi**
 
@@ -143,7 +146,7 @@ NPU load is read from `/sys/kernel/debug/rknpu/load`, and the NPU clock governor
 
 ## Key Takeaways
 
-1. **Hardware acceleration matters:** the RK3588 NPU is an order of magnitude faster than either CPU for this vision task: 12x over stock PyTorch and 7x over OpenVINO on the N150, 25x over the Orange Pi's own CPUs.
+1. **Hardware acceleration matters:** the RK3588 NPU is an order of magnitude faster than either CPU for this vision task: 3x over the N150's integrated GPU, 7x over OpenVINO on its CPU, 12x over stock PyTorch, and 25x over the Orange Pi's own CPUs.
 2. **Resource allocation:** inference on the NPU leaves the CPUs essentially free (about a quarter of one core) and cool (42 °C vs 76 °C), which is where an always-on edge node benefits. The Orange Pi's own CPU is not THAT much slower than the N150 on audio ([see the CPU benchmark comparison](https://www.cpubenchmark.net/compare/6304vs4906/Intel-N150-vs-Rockchip-RK3588)).
-3. **Software stack matters on the CPU too:** simply switching the N150 from stock PyTorch to OpenVINO gave 1.7x.
+3. **Software stack and the right silicon matter on the Intel side too:** switching the N150 from stock PyTorch to OpenVINO gave 1.7x on the CPU, and running the same OpenVINO model on the integrated GPU gave another 2.2x (3.8x over PyTorch), with very steady latency. That is the fair comparison for the NPU: it is still 3x faster, but a much smaller gap than against stock PyTorch. Whether the N150's GPU or the RK3588's NPU is cheaper in power I did not measure.
 4. **For Birdnet-Go, speed is not the problem:** both CPUs run BirdNET 30-90x faster than real time. The NPU is attractive only if the model can be converted for it, to save CPU and power; I did not test that.
