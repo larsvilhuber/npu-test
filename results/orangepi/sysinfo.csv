@@ -1,0 +1,16 @@
+key,value
+hostname,ubuntu
+cpu_model,"Cortex-A55+Cortex-A76"
+cores,8
+ram_gib,15.6
+kernel,Linux 6.1.43-rockchip-rk3588
+os,"Ubuntu 24.04.5 LTS"
+python,3.12.3
+torch,2.14.1+cu130
+rknn_toolkit_lite2,2.5.0
+librknnrt,2.5.0
+rknpu_driver,0.9.3
+cpu_governor,performance
+npu_governor,rknpu_ondemand
+npu_freq_hz,1000000000
+git_commit,ac942a6

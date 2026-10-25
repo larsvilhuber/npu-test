@@ -48,7 +48,8 @@ for _, r in summary.iterrows():
     dur = bench[(bench.host == r.host) & (bench.test == r.test)].t_s.max()
     busy = m[(m.t_s >= 5) & (m.t_s <= 5 + dur)]
     extra.append({'cpu_pct': busy.cpu_pct.mean(),
-                  'npu_pct': busy[['npu0_pct', 'npu1_pct', 'npu2_pct']].mean(axis=None),
+                  # only one NPU core is used by this model: report the busiest
+                  'npu_pct': busy[['npu0_pct', 'npu1_pct', 'npu2_pct']].mean().max(),
                   'temp_max_c': busy.temp_c.max(), 'cpu_mhz': busy.cpu_mhz.mean()})
 summary = pd.concat([summary, pd.DataFrame(extra)], axis=1)
 summary.round(2).to_csv(os.path.join(RES, 'summary.csv'), index=False)
@@ -120,7 +121,7 @@ u['name'] = u.host.map(lambda h: LABEL[h].split(' (')[0]) + '\n' + u.test
 u = u.sort_values(['host', 'test'])
 x = range(len(u))
 ax.bar([i - .2 for i in x], u.cpu_pct, .4, label='CPU (all cores)', color='#7570b3')
-ax.bar([i + .2 for i in x], u.npu_pct.fillna(0), .4, label='NPU (mean of 3 cores)', color='#d95f02')
+ax.bar([i + .2 for i in x], u.npu_pct.fillna(0), .4, label='NPU (busiest core)', color='#d95f02')
 ax.set_xticks(list(x))
 ax.set_xticklabels(u.name, fontsize=6, rotation=60, ha='right')
 style(ax, 'Utilisation while running ResNet-18', '', '% busy')
