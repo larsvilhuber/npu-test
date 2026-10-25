@@ -13,7 +13,7 @@ Now I need to figure out where I need this... (updating my [Birdnet Go](https://
 
 > In a head-to-head [ResNet-18](https://docs.pytorch.org/vision/main/models/generated/torchvision.models.resnet18.html) inference benchmark, the **Orange Pi 5 (RK3588 NPU)** classified an image in **4.5 ms (223 images/s)**: **3x faster** than the Intel N150's integrated GPU, **7x faster** than its CPU running Intel's OpenVINO and **12x faster** than the CPU running stock PyTorch, while using about **a quarter of one CPU core** and staying 30 °C cooler than the CPU runs.
 
-This is an expanded version of my first run. The benchmark scripts are no longer pasted into the post; everything is in the [GitHub repository](https://github.com/larsvilhuber/npu-test), including the raw CSV output of every run.
+All scripts, the raw CSV output of every run, and the code that produces the tables and graphs are in the [GitHub repository](https://github.com/larsvilhuber/npu-test).
 
 ## Benchmark Results Summary
 
@@ -73,8 +73,8 @@ PyTorch on the N150 scales with threads (9.3 → 13.9 → 18.7 img/s at 1, 2, 4 
 
 ## What did not work
 
-- **Only one NPU core is usable with this model.** My first version of this post said the NPU ran on "3 cores". It does not: with Rockchip's stock pre-compiled ResNet-18, the automatic mask (`NPU_CORE_AUTO`) and core 0 work (4.5 ms and 4.05 ms), but cores 1 and 2 and the multi-core masks (`0_1`, `0_1_2`) fail with `failed to submit` (some hang the driver until it soft-resets). Using all three cores probably requires re-exporting the model for multi-core, which needs the toolkit's x86 version.
-- **Locking the NPU clock did not help.** I had written that performance mode could reduce latency to ~1.5 ms. I tested it (devfreq governor `performance` versus the default `rknpu_ondemand`) and saw no meaningful change (4.28 vs 4.35 ms mean, 225 vs 225 img/s sustained). I did not record the NPU clock during the runs, but it reports 1 GHz, the maximum the driver offers, so presumably the default governor already reaches it under load. The earlier ~1.5 ms estimate is not reproduced.
+- **Only one of the RK3588's three NPU cores is usable with this model.** With Rockchip's stock pre-compiled ResNet-18, the automatic mask (`NPU_CORE_AUTO`) and core 0 work (4.5 ms and 4.05 ms), but cores 1 and 2 and the multi-core masks (`0_1`, `0_1_2`) fail with `failed to submit` (some hang the driver until it soft-resets). Using all three cores probably requires re-exporting the model for multi-core, which needs the toolkit's x86 version.
+- **Locking the NPU clock did not help.** I compared the NPU's devfreq governor set to `performance` against the default `rknpu_ondemand` and saw no meaningful change (4.28 vs 4.35 ms mean, 225 vs 225 img/s sustained). I did not record the NPU clock during the runs, but it reports 1 GHz, the maximum the driver offers, so presumably the default governor already reaches it under load.
 
 ## Caveats
 
@@ -86,7 +86,7 @@ PyTorch on the N150 scales with threads (9.3 → 13.9 → 18.7 img/s at 1, 2, 4 
 
 ## Reproducing this
 
-All scripts are in the [repository](https://github.com/larsvilhuber/npu-test); the post no longer inlines them.
+Everything lives in the [repository](https://github.com/larsvilhuber/npu-test).
 
 | What | Script |
 | :--- | :--- |
