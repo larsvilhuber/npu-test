@@ -14,7 +14,7 @@ for b in 4 16; do
 done
 run_test torch_sustained python3 "$B/resnet18_torch.py" --threads 4 --duration 300
 
-for d in CPU GPU; do
+for d in $(python3 -c "import openvino as ov; print(*ov.Core().available_devices)"); do
   run_test "openvino_$d" python3 "$B/resnet18_openvino.py" --device "$d" --iters 2000
 done
 run_test openvino_sustained python3 "$B/resnet18_openvino.py" --device CPU --duration 300
