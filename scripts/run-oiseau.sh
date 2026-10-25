@@ -27,3 +27,12 @@ done
 for t in 1 2 4; do
   run_test "birdnet_threads_$t" python3 "$B/birdnet_tflite.py" --threads "$t" --iters 200
 done
+
+# YOLOv5s at 640x640: model call only (infer) and with letterbox + decode + NMS (e2e)
+for d in $OV_DEVICES; do
+  run_test "yolo_ov${d}_infer" python3 "$B/yolov5_openvino.py" --device "$d" --stage infer --iters 500
+  run_test "yolo_ov${d}_e2e" python3 "$B/yolov5_openvino.py" --device "$d" --stage e2e --iters 300
+  for n in 2 3 4; do   # concurrent processes
+    run_streams "yolo_ov${d}_e2e_streams_$n" "$n" python3 "$B/yolov5_openvino.py" --device "$d" --stage e2e --duration 60
+  done
+done

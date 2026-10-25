@@ -6,6 +6,8 @@ Output columns: test,engine,device,threads,batch,iter,t_s,latency_ms
 """
 import argparse
 import csv
+import fcntl
+import io
 import time
 
 
@@ -36,12 +38,18 @@ def timed_loop(call, args, engine, device, threads, batch):
                 break
         elif i >= args.iters:
             break
-    with open(args.out, 'a', newline='') as f:
-        w = csv.writer(f)
+    # one locked append, so concurrent streams can share one CSV
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    with open(args.out, 'a') as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
         if f.tell() == 0:
             w.writerow(['test', 'engine', 'device', 'threads', 'batch',
                         'iter', 't_s', 'latency_ms'])
         w.writerows(rows)
+        f.write(buf.getvalue())
+        f.flush()
+        fcntl.flock(f, fcntl.LOCK_UN)
     lat = sorted(r[-1] for r in rows)
     mean = sum(float(x) for x in lat) / len(lat)
     print(f'{args.test}: {len(rows)} calls, mean {mean:.2f} ms, '

@@ -34,3 +34,14 @@ run_test torch_sustained python3 "$B/resnet18_torch.py" --threads 8 --duration 3
 for t in 1 4 8; do
   run_test "birdnet_threads_$t" python3 "$B/birdnet_tflite.py" --threads "$t" --iters 200
 done
+
+# YOLOv5s at 640x640: model call only (infer) and with letterbox + decode + NMS (e2e)
+for m in i8 fp16; do
+  run_test "yolo_rknn_${m}_infer" python3 "$B/yolov5_rknn.py" --model "yolov5s_relu_$m.rknn" --stage infer --iters 1000
+  run_test "yolo_rknn_${m}_e2e" python3 "$B/yolov5_rknn.py" --model "yolov5s_relu_$m.rknn" --stage e2e --iters 500
+done
+for n in 2 3 4; do   # concurrent processes; NPU_CORE_AUTO spreads them over idle cores
+  run_streams "yolo_rknn_i8_e2e_streams_$n" "$n" python3 "$B/yolov5_rknn.py" --model yolov5s_relu_i8.rknn --stage e2e --duration 60
+done
+run_test yolo_ovCPU_infer python3 "$B/yolov5_openvino.py" --device CPU --stage infer --iters 100
+run_test yolo_ovCPU_e2e python3 "$B/yolov5_openvino.py" --device CPU --stage e2e --iters 100

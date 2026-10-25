@@ -6,19 +6,27 @@ mkdir -p "$OUT"
 
 TEST_TIMEOUT=${TEST_TIMEOUT:-1500}  # seconds; longest test is 300 s plus model load
 
-run_test() {
-  local name=$1; shift
+# run_streams NAME N CMD... : N concurrent copies of CMD under one monitor
+run_streams() {
+  local name=$1 n=$2; shift 2
   [[ -z "${ONLY:-}" || $name =~ $ONLY ]] || return 0
-  echo "== $name"
+  echo "== $name ($n stream(s))"
   "$REPO/scripts/monitor.sh" "$OUT/$name.monitor.csv" &
   local mon=$!
   sleep 5   # idle baseline
-  # a hung NPU submit sits in uninterruptible sleep until killed
-  timeout -s KILL "$TEST_TIMEOUT" "$@" --test "$name" --out "$OUT/bench.csv"
+  local pids=() i
+  for ((i = 0; i < n; i++)); do
+    # a hung NPU submit sits in uninterruptible sleep until killed
+    timeout -s KILL "$TEST_TIMEOUT" "$@" --test "$name" --out "$OUT/bench.csv" &
+    pids+=($!)
+  done
+  wait "${pids[@]}"
   sleep 5
   kill "$mon"; wait "$mon" 2>/dev/null
   sleep 30  # cool-down between tests
 }
+
+run_test() { local name=$1; shift; run_streams "$name" 1 "$@"; }
 
 # Orange Pi only: set the NPU devfreq governor via the sudoers rule.
 npu_governor() {

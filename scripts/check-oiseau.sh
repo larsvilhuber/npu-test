@@ -14,6 +14,7 @@ check "torch import"      "python3 -c 'import torch, torchvision'"
 check "openvino import"   "python3 -c 'import openvino'"
 check "render group"      "id -nG | grep -qw render"
 check "openvino GPU"      "python3 -c \"import openvino as ov; assert 'GPU' in ov.Core().available_devices\""
+check "yolov5 files"      "test -f $REPO/models/yolov5s_relu.onnx && test -f $REPO/models/anchors_yolov5.txt && test -f $REPO/assets/bus.jpg"
 check "litert import"     "python3 -c 'import ai_edge_litert'"
 
 {
