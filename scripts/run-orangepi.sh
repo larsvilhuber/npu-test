@@ -6,7 +6,8 @@ source "$HOME/rknn-env/bin/activate"
 B="$REPO/scripts/bench"
 rm -f "$OUT/bench.csv"
 
-for m in auto 0 0_1_2; do
+# cores 1, 2 and multi-core masks fail with this precompiled model (see README)
+for m in auto 0; do
   run_test "rknn_mask_$m" python3 "$B/resnet18_rknn.py" --core-mask "$m" --iters 2000
 done
 run_test rknn_sustained python3 "$B/resnet18_rknn.py" --core-mask auto --duration 300
@@ -15,7 +16,8 @@ run_test rknn_sustained python3 "$B/resnet18_rknn.py" --core-mask auto --duratio
 GOV0=$(npu_governor_get)
 trap 'npu_governor "$GOV0"' EXIT
 npu_governor performance
-for m in auto 0 0_1_2; do
+# cores 1, 2 and multi-core masks fail with this precompiled model (see README)
+for m in auto 0; do
   run_test "rknn_perf_mask_$m" python3 "$B/resnet18_rknn.py" --core-mask "$m" --iters 2000
 done
 run_test rknn_perf_sustained python3 "$B/resnet18_rknn.py" --core-mask auto --duration 300

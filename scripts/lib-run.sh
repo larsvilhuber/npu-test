@@ -4,6 +4,8 @@ REPO=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 OUT="$REPO/results/$SITE"
 mkdir -p "$OUT"
 
+TEST_TIMEOUT=${TEST_TIMEOUT:-1500}  # seconds; longest test is 300 s plus model load
+
 run_test() {
   local name=$1; shift
   [[ -z "${ONLY:-}" || $name =~ $ONLY ]] || return 0
@@ -11,7 +13,8 @@ run_test() {
   "$REPO/scripts/monitor.sh" "$OUT/$name.monitor.csv" &
   local mon=$!
   sleep 5   # idle baseline
-  "$@" --test "$name" --out "$OUT/bench.csv"
+  # a hung NPU submit sits in uninterruptible sleep until killed
+  timeout -s KILL "$TEST_TIMEOUT" "$@" --test "$name" --out "$OUT/bench.csv"
   sleep 5
   kill "$mon"; wait "$mon" 2>/dev/null
   sleep 30  # cool-down between tests
