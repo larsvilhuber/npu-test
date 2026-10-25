@@ -4,7 +4,8 @@ SITE=oiseau
 source "$(dirname "$0")/lib-run.sh"
 source "$REPO/bench-env/bin/activate"
 B="$REPO/scripts/bench"
-rm -f "$OUT/bench.csv"
+# ONLY=<regex> reruns matching tests; their old rows must be removed first
+[[ -n "${ONLY:-}" ]] || rm -f "$OUT/bench.csv"
 
 for t in 1 2 4; do
   run_test "torch_threads_$t" python3 "$B/resnet18_torch.py" --threads "$t" --iters 500

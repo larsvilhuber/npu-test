@@ -6,6 +6,7 @@ mkdir -p "$OUT"
 
 run_test() {
   local name=$1; shift
+  [[ -z "${ONLY:-}" || $name =~ $ONLY ]] || return 0
   echo "== $name"
   "$REPO/scripts/monitor.sh" "$OUT/$name.monitor.csv" &
   local mon=$!
