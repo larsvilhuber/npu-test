@@ -26,7 +26,7 @@ ResNet-18, one 224x224 image per call, thousands of calls per test. I report the
 | **Orange Pi 5** | 8 CPU cores (A76+A55) | PyTorch FP32 | 112.3 | 128.4 | 8.9 | 59 |
 | **Intel N150** | 4 CPU cores | PyTorch FP32 | 53.5 | 477.6 | 18.7 | 95 |
 | **Intel N150** | 4 CPU cores | OpenVINO FP32 | 31.0 | 60.1 | 32.3 | 93 |
-| **Intel N150** | integrated GPU (Xe) | OpenVINO FP32 | 14.0 | 14.7 | 71.5 | 55 * |
+| **Intel N150** | integrated GPU | OpenVINO FP32 | 14.0 | 14.7 | 71.5 | 55 * |
 
 \* The N150 machine runs other services that use ~27% CPU on their own (see caveats), so the GPU run's CPU figure is mostly that, plus the driver thread.
 
