@@ -4,7 +4,7 @@ SITE=orangepi
 source "$(dirname "$0")/lib-run.sh"
 source "$HOME/rknn-env/bin/activate"
 B="$REPO/scripts/bench"
-rm -f "$OUT/bench.csv"
+[ -n "${ONLY:-}" ] || rm -f "$OUT/bench.csv"   # ONLY reruns append
 
 # NPU core masks (all work with rknpu driver 0.9.7; on 0.9.3 only auto and 0 did)
 for m in auto 0 1 2 0_1 0_1_2; do
