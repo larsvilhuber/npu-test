@@ -40,8 +40,8 @@ for m in i8 fp16; do
   run_test "yolo_rknn_${m}_infer" python3 "$B/yolov5_rknn.py" --model "yolov5s_relu_$m.rknn" --stage infer --iters 1000
   run_test "yolo_rknn_${m}_e2e" python3 "$B/yolov5_rknn.py" --model "yolov5s_relu_$m.rknn" --stage e2e --iters 500
 done
-for n in 2 3 4; do   # concurrent processes; NPU_CORE_AUTO spreads them over idle cores
-  run_streams "yolo_rknn_i8_e2e_streams_$n" "$n" python3 "$B/yolov5_rknn.py" --model yolov5s_relu_i8.rknn --stage e2e --duration 60
-done
+# Concurrent NPU streams are not run: on cores 1 and 2 the rknpu driver 0.9.3 times out
+# and soft-resets, and two concurrent processes crashed the kernel (NULL dereference in
+# rknpu_job_next), hanging the board.
 run_test yolo_ovCPU_infer python3 "$B/yolov5_openvino.py" --device CPU --stage infer --iters 100
 run_test yolo_ovCPU_e2e python3 "$B/yolov5_openvino.py" --device CPU --stage e2e --iters 100

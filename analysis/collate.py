@@ -80,7 +80,7 @@ def save(fig, name):
 
 # ---- 1. latency distribution: ResNet-18, batch 1, best config per engine --
 r18 = bench[(bench.batch == 1) & bench.engine.str.contains('rknn|torch|openvino')
-            & ~bench.test.str.contains('sustained')]
+            & ~bench.test.str.contains('sustained|^yolo')]
 best = (r18.groupby(['host', 'test']).latency_ms.median().reset_index()
         .sort_values('latency_ms').groupby('host').head(3))
 sel = r18.merge(best[['host', 'test']])
@@ -116,7 +116,7 @@ save(fig, 'sustained.png')
 # ---- 3. CPU vs NPU utilisation while running inference --------------------
 fig, ax = plt.subplots(figsize=(8, 4.5))
 u = summary[summary.engine.str.contains('rknn|torch|openvino') & (summary.batch == 1)
-            & ~summary.test.str.contains('sustained')].copy()
+            & ~summary.test.str.contains('sustained|^yolo')].copy()
 u['name'] = u.host.map(lambda h: LABEL[h].split(' (')[0]) + '\n' + u.test
 u = u.sort_values(['host', 'test'])
 x = range(len(u))
@@ -156,5 +156,41 @@ if len(bd):
           'threads', 'real-time factor (log)')
     ax.legend(frameon=False)
     save(fig, 'birdnet.png')
+
+# ---- 6. YOLOv5s: frames per second, single stream and concurrent streams ---
+yo = summary[summary.test.str.startswith('yolo')].copy()
+if len(yo):
+    yo['streams'] = yo.test.str.extract(r'streams_(\d+)$')[0].fillna(1).astype(int)
+    yo['stage'] = yo.test.str.extract(r'_(infer|e2e)')[0]
+    # aggregate fps over all concurrent processes: calls completed / timed seconds
+    agg = {}
+    for (h, t), d in bench[bench.test.str.startswith('yolo')].groupby(['host', 'test']):
+        agg[(h, t)] = len(d) / d.t_s.max()
+    yo['fps'] = [agg[(r.host, r.test)] if r.streams > 1 else r.inputs_per_s
+                 for r in yo.itertuples()]
+    yo['engine_dev'] = yo.host.map(lambda h: LABEL[h].split(' (')[0]) + ' ' + yo.engine.str.replace('yolov5s-', '') \
+        + ' ' + yo.device
+    yo.round(2).to_csv(os.path.join(RES, 'yolo_summary.csv'), index=False)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), gridspec_kw={'width_ratios': [3, 2]})
+    one = yo[yo.streams == 1].sort_values('fps')
+    for stage, off, hatch in [('infer', -.2, ''), ('e2e', .2, '//')]:
+        d = one[one.stage == stage]
+        names = list(dict.fromkeys(one.engine_dev))
+        xs = [names.index(n) + off for n in d.engine_dev]
+        axes[0].bar(xs, d.fps, .4, hatch=hatch, label={'infer': 'model only', 'e2e': 'with letterbox + decode + NMS'}[stage],
+                    color=[COLOR[h] for h in d.host], edgecolor='white')
+    axes[0].set_xticks(range(len(names)))
+    axes[0].set_xticklabels(names, fontsize=7, rotation=30, ha='right')
+    style(axes[0], 'YOLOv5s 640x640, one stream', '', 'frames / s')
+    axes[0].legend(frameon=False, fontsize=8)
+    for (h, e), d in yo[yo.stage == 'e2e'].groupby(['host', 'engine_dev']):
+        if (d.streams > 1).any():
+            d = d.sort_values('streams')
+            axes[1].plot(d.streams, d.fps, 'o-', label=e, color=COLOR[h],
+                         ls='-' if 'npu' in e else '--')
+    style(axes[1], 'Aggregate fps, concurrent streams (end to end)', 'concurrent processes', 'frames / s')
+    axes[1].legend(frameon=False, fontsize=7)
+    save(fig, 'yolo.png')
 
 print(summary.round(2).to_string())
