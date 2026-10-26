@@ -55,6 +55,16 @@ While the NPU runs inference, the Orange Pi's eight CPU cores are about 95% idle
 
 ![CPU vs NPU utilisation](https://raw.githubusercontent.com/larsvilhuber/npu-test/main/figures/utilisation.png)
 
+For a feel of what this looks like on the machines themselves, here are `btop` snapshots of each system's CPU at a random point during the test runs. On the Orange Pi (2% busy overall, 45 °C, not one core above 4%):
+
+![btop on the Orange Pi 5 during the tests](https://raw.githubusercontent.com/larsvilhuber/npu-test/main/figures/btop-orangepi.png)
+
+and on the N150 (all four cores at 100%, 75 °C, 2.9 GHz, load average 5.6):
+
+![btop on the Intel N150 during the tests](https://raw.githubusercontent.com/larsvilhuber/npu-test/main/figures/btop-oiseau.png)
+
+The snapshots are single moments, not averages, and I did not record which test was running at each; the tables above and the graphs are the measured results.
+
 ### Five minutes of sustained load
 
 Each engine also ran continuously for 300 seconds. Nothing throttles: the NPU stays at 4.4 ms and warms from 35 to 48 °C, the N150's iGPU holds 13.9 ms (71.7 img/s over 21,469 calls, with almost no spread: 95th percentile 14.7 ms), while the Orange Pi CPU run heats to 81 °C and the N150 CPU runs to 76-81 °C, with no visible drop in clock speed or throughput. (The N150's baseline is already ~68 °C because of the other services on that machine.)
