@@ -45,11 +45,11 @@ cp "$ZOO/model/anchors_yolov5.txt" "$REPO/models/"
 cp "$ZOO/model/bus.jpg" "$REPO/assets/"
 
 # Full RKNN-Toolkit2 (ARM64 build, ONNX/PyTorch only) in its own venv: it pins
-# numpy and torch versions that conflict with rknn-env. torch itself is not needed.
+# numpy and torch versions that conflict with rknn-env; rknn imports torch.
 python3 -m venv rknn-build-env
 source rknn-build-env/bin/activate
 pip install --upgrade pip
-pip install -r <(grep -v '^torch' "$HOME/rknn-toolkit2/rknn-toolkit2/packages/arm64/arm64_requirements_cp${PY_VER}.txt")
+pip install -r "$HOME/rknn-toolkit2/rknn-toolkit2/packages/arm64/arm64_requirements_cp${PY_VER}.txt"
 pip install --no-deps "$HOME"/rknn-toolkit2/rknn-toolkit2/packages/arm64/rknn_toolkit2-*-cp"${PY_VER}"-*.whl
 
 # INT8 (calibrated on the model zoo's 20 COCO images) and FP16 builds for RK3588
