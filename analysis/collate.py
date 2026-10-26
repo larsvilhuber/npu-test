@@ -173,7 +173,7 @@ if len(yo):
     yo.round(2).to_csv(os.path.join(RES, 'yolo_summary.csv'), index=False)
 
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.5), gridspec_kw={'width_ratios': [3, 2]})
-    one = yo[yo.streams == 1].sort_values('fps')
+    one = yo[(yo.streams == 1) & ~yo.test.str.contains('_mask_')].sort_values('fps')
     for stage, off, hatch in [('infer', -.2, ''), ('e2e', .2, '//')]:
         d = one[one.stage == stage]
         names = list(dict.fromkeys(one.engine_dev))
@@ -187,10 +187,43 @@ if len(yo):
     for (h, e), d in yo[yo.stage == 'e2e'].groupby(['host', 'engine_dev']):
         if (d.streams > 1).any():
             d = d.sort_values('streams')
-            axes[1].plot(d.streams, d.fps, 'o-', label=e, color=COLOR[h],
-                         ls='-' if 'npu' in e else '--')
+            mk = 'o-' if 'npu' in e else ('s--' if ' gpu' in e else '^:')
+            axes[1].plot(d.streams, d.fps, mk, label=e, color=COLOR[h])
     style(axes[1], 'Aggregate fps, concurrent streams (end to end)', 'concurrent processes', 'frames / s')
+    axes[1].set_xticks([1, 2, 3, 4])
+    axes[1].set_ylim(bottom=0)
     axes[1].legend(frameon=False, fontsize=7)
     save(fig, 'yolo.png')
+
+# ---- 7. NPU scaling: more cores for one process vs more processes -----------
+def agg_fps(host, test):
+    d = bench[(bench.host == host) & (bench.test == test)]
+    return len(d) / d.t_s.max()
+
+
+def one(host, test):
+    return float(summary[(summary.host == host) & (summary.test == test)].inputs_per_s.iloc[0])
+
+
+op = 'orangepi'
+if (summary.test == 'rknn_mask_0_1_2').any():
+    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    r_cores = [one(op, t) for t in ['rknn_mask_0', 'rknn_mask_0_1', 'rknn_mask_0_1_2']]
+    r_procs = [one(op, 'rknn_mask_auto'), agg_fps(op, 'rknn_streams_2'), agg_fps(op, 'rknn_streams_3')]
+    axes[0].plot([1, 2, 3], r_cores, 'o-', color=COLOR[op], label='one process, N cores')
+    axes[0].plot([1, 2, 3], r_procs, 's--', color=COLOR[op], label='N processes (auto placement)')
+    style(axes[0], 'ResNet-18 INT8 on the RK3588 NPU', 'cores / processes', 'images / s')
+    y_cores = [one(op, t) for t in ['yolo_rknn_i8_infer', 'yolo_rknn_i8_infer_mask_0_1', 'yolo_rknn_i8_infer_mask_0_1_2']]
+    y_procs = [one(op, 'yolo_rknn_i8_e2e')] + [agg_fps(op, f'yolo_rknn_i8_e2e_streams_{n}') for n in (2, 3, 4)]
+    axes[1].plot([1, 2, 3], y_cores, 'o-', color=COLOR[op], label='one process, N cores (model only)')
+    axes[1].plot([1, 2, 3, 4], y_procs, 's--', color=COLOR[op], label='N processes (with decode + NMS)')
+    style(axes[1], 'YOLOv5s INT8 on the RK3588 NPU', 'cores / processes', 'frames / s')
+    for ax in axes:
+        ax.set_ylim(bottom=0)
+        ax.set_xticks([1, 2, 3, 4] if ax is axes[1] else [1, 2, 3])
+        ax.legend(frameon=False, fontsize=8)
+    save(fig, 'npu_scaling.png')
+    print('NPU scaling ResNet cores', [round(x) for x in r_cores], 'procs', [round(x) for x in r_procs])
+    print('NPU scaling YOLO cores', [round(x, 1) for x in y_cores], 'procs', [round(x, 1) for x in y_procs])
 
 print(summary.round(2).to_string())
